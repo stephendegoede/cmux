@@ -24,7 +24,9 @@ public struct AppSceneView: View {
         Group {
             switch model.status {
             case .failed(let reason):
-                AppSceneFailureRow(reason: reason)
+                // The same plain words as the AppKit row (AppFailureCopy); the raw reason is its Details.
+                let copy = AppFailureCopy(reason: reason)
+                AppSceneFailureRow(reason: copy.location.map { "\(copy.title)\n\($0)" } ?? copy.title)
             case .disconnected(let reason):
                 AppSceneFailureRow(reason: reason, symbol: "bolt.horizontal", tone: \.tertiary)
             case .loading, .ready:

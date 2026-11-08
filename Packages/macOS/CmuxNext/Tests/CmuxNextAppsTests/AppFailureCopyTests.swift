@@ -1,0 +1,70 @@
+import AppKit
+@testable import CmuxNextApps
+import CmuxNextDesign
+import Testing
+
+/// A failed app mount says what happened in plain words (``AppFailureCopy``), and its row keeps the
+/// app host's raw reason for Copy Error and Details only.
+@MainActor @Suite(.serialized) struct AppFailureCopyTests {
+    @Test(arguments: [
+        ("init: main: Error: expecting ';' at eval_script:2:12", "This section's script has an error", "Line 2, column 12: expecting ';'"),
+        ("main: SyntaxError: unexpected token in expression: ')' at eval_script:14:3", "This section's script has an error",
+         "Line 14, column 3: unexpected token in expression: ')'"),
+        ("init: ReferenceError: pulls is not defined\n    at render (eval_script:7:5)", "This section's script has an error",
+         "Line 7, column 5: pulls is not defined"),
+        ("init: TypeError: cannot read property 'title' of undefined", "This section's script has an error",
+         "cannot read property 'title' of undefined"),
+    ])
+    func aScriptErrorNamesWhereAndWhy(reason: String, title: String, location: String) {
+        let copy = AppFailureCopy(reason: reason)
+        #expect(copy.title == title)
+        #expect(copy.location == location)
+        #expect(copy.detail == reason, "the raw reason is kept whole for Copy Error")
+    }
+
+    @Test func aBudgetFailureSaysTheSectionIsTooLarge() {
+        let copy = AppFailureCopy(reason: "app.limit: more than 5000 scene nodes")
+        #expect(copy.title == "This section is too large to show")
+        #expect(copy.location == nil)
+    }
+
+    @Test func anyOtherFailureSaysItCouldNotLoad() {
+        let copy = AppFailureCopy(reason: "scene op reused node id r1")
+        #expect(copy.title == "This section couldn't load")
+        #expect(copy.location == nil)
+    }
+
+    private static func all(in view: NSView) -> [NSView] { [view] + view.subviews.flatMap { all(in: $0) } }
+
+    @Test func copyErrorPutsTheRawReasonOnThePasteboardAndDetailsShowsIt() throws {
+        let raw = "init: main: Error: expecting ';' at eval_script:2:12"
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("cmux-test-\(UUID().uuidString)"))
+        defer { pasteboard.releaseGlobally() }
+        let view = AppSceneNativeView(model: AppSceneModel(status: .failed(raw)), pasteboard: pasteboard)
+        view.frame = NSRect(x: 0, y: 0, width: 260, height: 200)
+        view.layoutSubtreeIfNeeded()
+        let closed = view.preferredHeight(width: 260)
+        let buttons = Self.all(in: view).compactMap { $0 as? NSButton }
+        let copy = try #require(buttons.first { $0.title == "Copy Error" })
+        copy.performClick(nil)
+        #expect(pasteboard.string(forType: .string) == raw)
+        #expect(copy.title == "Copied")
+
+        let details = try #require(buttons.first { $0.title == "Details" })
+        details.performClick(nil)
+        view.layoutSubtreeIfNeeded()
+        let shown = Self.all(in: view).filter { !$0.isHiddenOrHasHiddenAncestor }.compactMap { ($0 as? ChromeLabel)?.stringValue }
+        #expect(shown.contains(raw))
+        #expect(details.title == "Hide Details")
+        #expect(view.preferredHeight(width: 260) > closed, "the open Details adds the raw reason's lines")
+    }
+
+    @Test func aDisconnectedSectionKeepsItsOneLineAndNoButtons() {
+        let view = AppSceneNativeView(model: AppSceneModel(status: .disconnected("This machine isn't connected")))
+        view.frame = NSRect(x: 0, y: 0, width: 260, height: 200)
+        view.layoutSubtreeIfNeeded()
+        let shown = Self.all(in: view).filter { !$0.isHiddenOrHasHiddenAncestor }
+        #expect(shown.compactMap { ($0 as? ChromeLabel)?.stringValue }.contains("This machine isn't connected"))
+        #expect(shown.compactMap { $0 as? NSButton }.isEmpty)
+    }
+}
