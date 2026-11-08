@@ -14,6 +14,8 @@ import Testing
          "Line 7, column 5: pulls is not defined"),
         ("init: TypeError: cannot read property 'title' of undefined", "This section's script has an error",
          "cannot read property 'title' of undefined"),
+        // An empty message: the name's spaces and the place's meet; no reversed range.
+        ("init: main: Error: at eval_script:1:1", "This section's script has an error", "Line 1, column 1"),
     ])
     func aScriptErrorNamesWhereAndWhy(reason: String, title: String, location: String) {
         let copy = AppFailureCopy(reason: reason)
