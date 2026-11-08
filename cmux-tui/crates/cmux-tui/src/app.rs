@@ -104,6 +104,7 @@ use crate::ui::{
 };
 
 mod attention_jump;
+pub(crate) mod copy_mode;
 mod host_notify_ops;
 
 #[cfg(test)]
@@ -7444,6 +7445,7 @@ pub struct App {
     pending_size_releases: HashSet<SurfaceId>,
     geometry_authority_surface: Option<SurfaceId>,
     pub prefix_armed: bool,
+    pub(crate) copy_mode: Option<copy_mode::CopyModeSession>,
     pub session_label: String,
     /// Machine-level model spend readout from the session's daemon; `None`
     /// hides the sidebar readout.
@@ -9725,6 +9727,7 @@ fn run_with_machine_updates_inner(request: RunRequest) -> anyhow::Result<RunOutc
         pending_size_releases: HashSet::new(),
         geometry_authority_surface: None,
         prefix_armed: false,
+        copy_mode: None,
         session_label,
         surface_only,
         sidebar_visible: surface_only.is_none(),
@@ -18620,6 +18623,11 @@ impl App {
                 prefix: KeyEvent::new(prefix.code, prefix.mods),
             });
         }
+        if self.copy_mode_active()
+            && let Some(action) = self.copy_mode_key(&input)
+        {
+            return KeyboardIngress::Handled(action);
+        }
         KeyboardIngress::Routed(TerminalInput::Keyboard(input))
     }
 
@@ -20216,6 +20224,12 @@ impl App {
             Action::ResizeShrink => self.resize_focused_split(-0.05),
             Action::ScrollUp => self.scroll_active(-10),
             Action::ScrollDown => self.scroll_active(10),
+            Action::ScrollPageUp => self.scroll_active_pages(-1, 1),
+            Action::ScrollPageDown => self.scroll_active_pages(1, 1),
+            Action::ScrollHalfPageUp => self.scroll_active_pages(-1, 2),
+            Action::ScrollHalfPageDown => self.scroll_active_pages(1, 2),
+            Action::CopyMode => self.enter_copy_mode(false),
+            Action::SearchScrollback => self.enter_copy_mode(true),
             Action::ClearHistory => {
                 if let Some(surface) = self.active_surface()
                     && self.tree.surface_kind(surface) == SurfaceKind::Pty
@@ -24961,6 +24975,12 @@ fn action_is_frontend_local(action: Action) -> bool {
             | Action::FocusNextPane
             | Action::ScrollUp
             | Action::ScrollDown
+            | Action::ScrollPageUp
+            | Action::ScrollPageDown
+            | Action::ScrollHalfPageUp
+            | Action::ScrollHalfPageDown
+            | Action::CopyMode
+            | Action::SearchScrollback
             | Action::BrowserEditUrl
             | Action::ShowShortcuts
             | Action::NextAttention
@@ -24995,6 +25015,12 @@ fn action_available_in_mode(action: Action, surface_only: bool) -> bool {
                 | Action::RenameTab
                 | Action::ScrollUp
                 | Action::ScrollDown
+                | Action::ScrollPageUp
+                | Action::ScrollPageDown
+                | Action::ScrollHalfPageUp
+                | Action::ScrollHalfPageDown
+                | Action::CopyMode
+                | Action::SearchScrollback
                 | Action::ClearHistory
                 | Action::ShowShortcuts
                 | Action::Detach
@@ -25012,6 +25038,12 @@ fn action_prepares_pty_release(action: Action) -> bool {
             | Action::NewPaneRight
             | Action::ScrollUp
             | Action::ScrollDown
+            | Action::ScrollPageUp
+            | Action::ScrollPageDown
+            | Action::ScrollHalfPageUp
+            | Action::ScrollHalfPageDown
+            | Action::CopyMode
+            | Action::SearchScrollback
             | Action::BrowserEditUrl
             | Action::ShowShortcuts
             | Action::AttentionList
@@ -25183,6 +25215,7 @@ fn browser_character_code(character: char) -> (&'static str, u32) {
 #[cfg(test)]
 mod tests {
     mod attention;
+    mod copy_mode;
 
     #[test]
     fn input_class_groups_routing_semantics() {
@@ -26910,6 +26943,12 @@ mod tests {
                     | Action::RenameTab
                     | Action::ScrollUp
                     | Action::ScrollDown
+                    | Action::ScrollPageUp
+                    | Action::ScrollPageDown
+                    | Action::ScrollHalfPageUp
+                    | Action::ScrollHalfPageDown
+                    | Action::CopyMode
+                    | Action::SearchScrollback
                     | Action::ClearHistory
                     | Action::ShowShortcuts
                     | Action::Detach
@@ -46881,6 +46920,7 @@ mod tests {
             pending_size_releases: HashSet::new(),
             geometry_authority_surface: None,
             prefix_armed: false,
+            copy_mode: None,
             session_label: "test".to_string(),
             surface_only: None,
             sidebar_visible: true,
