@@ -66,7 +66,9 @@ import Testing
         view.frame = NSRect(x: 0, y: 0, width: 260, height: 200)
         view.layoutSubtreeIfNeeded()
         let shown = Self.all(in: view).filter { !$0.isHiddenOrHasHiddenAncestor }
-        #expect(shown.compactMap { ($0 as? ChromeLabel)?.stringValue }.contains("This machine isn't connected"))
-        #expect(shown.compactMap { $0 as? NSButton }.isEmpty)
+        let texts = shown.compactMap { ($0 as? ChromeLabel)?.stringValue }
+        let buttons = shown.compactMap { $0 as? NSButton }
+        #expect(texts.contains("This machine isn't connected"))
+        #expect(buttons.isEmpty)
     }
 }
