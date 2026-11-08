@@ -9,6 +9,20 @@ nonisolated enum AppsStrings {
     static var windowTitle: String { t("store.window.title", "App Store") }
     /// An app mount failed and the supervisor gave no reason.
     static var mountFailed: String { t("apps.mount.failed", "The app could not start") }
+    /// A failed mount's row (AppFailureCopy): its script threw or did not parse.
+    static var failureScript: String { t("apps.failure.script", "This section's script has an error") }
+    /// Where a script error is, and the engine's message.
+    static func failureScriptAt(line: String, column: String, message: String) -> String {
+        String(format: t("apps.failure.scriptAt", "Line %1$@, column %2$@: %3$@"), line, column, message)
+    }
+    /// The scene went past the node or depth budget.
+    static var failureTooLarge: String { t("apps.failure.tooLarge", "This section is too large to show") }
+    /// Any other failed mount; the reason is under Details.
+    static var failureGeneric: String { t("apps.failure.generic", "This section couldn't load") }
+    static var failureCopy: String { t("apps.failure.copy", "Copy Error") }
+    static var failureCopied: String { t("apps.failure.copied", "Copied") }
+    static var failureDetails: String { t("apps.failure.details", "Details") }
+    static var failureHideDetails: String { t("apps.failure.hideDetails", "Hide Details") }
     /// The second line of an app's toast detail (`cmux.toast`): the app that showed it.
     static func toastSource(_ app: String) -> String { String(format: t("apps.toast.source", "From %@"), app) }
     static var discover: String { t("store.tab.discover", "Discover") }
