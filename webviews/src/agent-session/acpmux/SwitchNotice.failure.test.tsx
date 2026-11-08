@@ -116,6 +116,21 @@ test("an unknown start failure still reads as a sentence, and Copy error copies 
   expect(buttons(container)).toContain("Copied");
 });
 
+test("a refusal written as plain sentences keeps them, as before", async () => {
+  const container = installDom();
+  const text = "build-box did not start the agent in time. Try again.";
+  await render(container, text, []);
+  expect(sentence(container)).toBe(`Couldn't start Claude Code: ${text}`);
+  expect(details(container)).toBeNull();
+});
+
+test("acpmux's own not-installed sentence still offers Install", async () => {
+  const container = installDom();
+  await render(container, "Claude Code is not installed on this machine.", []);
+  expect(sentence(container)).toBe("Claude Code isn't installed on this machine.");
+  expect(buttons(container)).toContain("Install");
+});
+
 test("a coded refusal written for people keeps its own sentence and has no Details", async () => {
   const container = installDom();
   const text = "build-box has no work folder to start in. Use Choose folder to pick one there.";
