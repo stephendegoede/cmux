@@ -14,13 +14,13 @@ final class AppFailureNSView: NSView {
     private let raw = ChromeLabel(wrappingLabelWithString: "")
     private let copyButton = AppFailureNSView.linkButton()
     private let detailsButton = AppFailureNSView.linkButton()
-    /// Where Copy Error writes; tests pass their own.
-    private let pasteboard: NSPasteboard
+    /// What Copy Error does with the raw reason: the general pasteboard; tests pass a recorder.
+    private let copyText: @MainActor (String) -> Void
     private var shown: AppFailureCopy?
     private var detailsOpen = false
 
-    init(pasteboard: NSPasteboard = .general) {
-        self.pasteboard = pasteboard
+    init(copyText: @escaping @MainActor (String) -> Void = AppFailureNSView.copyToPasteboard) {
+        self.copyText = copyText
         super.init(frame: .zero)
         title.font = Typography.caption
         title.maximumNumberOfLines = 2
@@ -78,8 +78,7 @@ final class AppFailureNSView: NSView {
 
     @objc private func copyError() {
         guard let detail = shown?.detail else { return }
-        pasteboard.clearContents()
-        pasteboard.setString(detail, forType: .string)
+        copyText(detail)
         setTitle(copyButton, AppsStrings.failureCopied)
     }
 
@@ -146,6 +145,12 @@ final class AppFailureNSView: NSView {
             raw.textColor = Palette.textTertiary
         }
         for button in [copyButton, detailsButton] { setTitle(button, button.title) }
+    }
+
+    /// Copy Error's default: the raw reason on the general pasteboard, as plain text.
+    static func copyToPasteboard(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
     }
 
     /// A borderless text button in the caption font and the accent ink, sized to its title.

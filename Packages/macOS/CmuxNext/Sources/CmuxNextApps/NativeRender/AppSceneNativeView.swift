@@ -26,11 +26,13 @@ final class AppSceneNativeView: NSView {
     private var drawnRevision = -1
     private var drawnStatus: AppSceneModel.Status?
 
-    /// - Parameter pasteboard: Where the failure row's Copy Error writes; tests pass their own.
-    init(model: AppSceneModel, bundleDirectory: URL? = nil, pasteboard: NSPasteboard = .general) {
+    /// - Parameter copyText: What the failure row's Copy Error does with the raw reason (the general
+    ///   pasteboard); tests pass a recorder.
+    init(model: AppSceneModel, bundleDirectory: URL? = nil,
+         copyText: @escaping @MainActor (String) -> Void = AppFailureNSView.copyToPasteboard) {
         self.model = model
         self.bundleDirectory = bundleDirectory
-        failure = AppFailureNSView(pasteboard: pasteboard)
+        failure = AppFailureNSView(copyText: copyText)
         super.init(frame: .zero)
         wantsLayer = true
         failure.isHidden = true

@@ -36,20 +36,22 @@ import Testing
         #expect(copy.location == nil)
     }
 
+    /// What Copy Error handed over, in place of the pasteboard (a fleet session may have none).
+    @MainActor private final class CopyRecorder { var texts: [String] = [] }
+
     private static func all(in view: NSView) -> [NSView] { [view] + view.subviews.flatMap { all(in: $0) } }
 
-    @Test func copyErrorPutsTheRawReasonOnThePasteboardAndDetailsShowsIt() throws {
+    @Test func copyErrorHandsOverTheRawReasonAndDetailsShowsIt() throws {
         let raw = "init: main: Error: expecting ';' at eval_script:2:12"
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name("cmux-test-\(UUID().uuidString)"))
-        defer { pasteboard.releaseGlobally() }
-        let view = AppSceneNativeView(model: AppSceneModel(status: .failed(raw)), pasteboard: pasteboard)
+        let copied = CopyRecorder()
+        let view = AppSceneNativeView(model: AppSceneModel(status: .failed(raw)), copyText: { copied.texts.append($0) })
         view.frame = NSRect(x: 0, y: 0, width: 260, height: 200)
         view.layoutSubtreeIfNeeded()
         let closed = view.preferredHeight(width: 260)
         let buttons = Self.all(in: view).compactMap { $0 as? NSButton }
         let copy = try #require(buttons.first { $0.title == "Copy Error" })
         copy.performClick(nil)
-        #expect(pasteboard.string(forType: .string) == raw)
+        #expect(copied.texts == [raw])
         #expect(copy.title == "Copied")
 
         let details = try #require(buttons.first { $0.title == "Details" })
