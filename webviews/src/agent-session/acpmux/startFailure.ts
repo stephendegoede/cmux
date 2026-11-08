@@ -17,10 +17,12 @@ export type StartFailureView = {
   install?: string;
 };
 
-/// The spawn words for a binary that is not there: an `ENOENT` from the spawn, a shell's "command
-/// not found", acpmux's own "is not installed".
+/// The spawn words for a binary that is not there: the spawn's own `ENOENT` ("spawn claude-agent-acp:
+/// No such file or directory"), a shell's "command not found", acpmux's own "is not installed". A
+/// missing file or folder the agent names is not a missing agent (`MISSING_FOLDER`).
 const NOT_INSTALLED =
-  /\bENOENT\b|no such file or directory|command not found|executable (?:file )?not found|not found in \$?PATH|(?:is )?not installed/i;
+  /\bspawn\b[^\n]*(?:\bENOENT\b|no such file or directory)|command not found|executable (?:file )?not found|not found in \$?PATH|\bis not installed\b/i;
+const MISSING_FOLDER = /\b(?:cwd|current_dir|working (?:dir|directory|folder)|folder)\b/i;
 
 export function startFailureView(
   t: Translate,
@@ -33,7 +35,7 @@ export function startFailureView(
   if (startRefusalAction(switching.code))
     return { sentence: t("switch.failed", { agent: switching.name, reason: raw }) };
   const kind = failureKind(raw, { name: switching.name, harness: switching.harness }, switching.code);
-  if ((kind === "spawn-failed" || kind === "other") && NOT_INSTALLED.test(raw)) {
+  if ((kind === "spawn-failed" || kind === "other") && NOT_INSTALLED.test(raw) && !MISSING_FOLDER.test(raw)) {
     const install = INSTALL_COMMANDS[switching.harness];
     return {
       sentence: t("switch.notInstalled", { agent: switching.name }),

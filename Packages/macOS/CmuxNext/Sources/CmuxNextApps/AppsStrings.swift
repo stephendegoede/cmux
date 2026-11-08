@@ -13,7 +13,9 @@ nonisolated enum AppsStrings {
     static var failureScript: String { t("apps.failure.script", "This section's script has an error") }
     /// Where a script error is, and the engine's message.
     static func failureScriptAt(line: String, column: String, message: String) -> String {
-        String(format: t("apps.failure.scriptAt", "Line %1$@, column %2$@: %3$@"), line, column, message)
+        message.isEmpty
+            ? String(format: t("apps.failure.scriptAtOnly", "Line %1$@, column %2$@"), line, column)
+            : String(format: t("apps.failure.scriptAt", "Line %1$@, column %2$@: %3$@"), line, column, message)
     }
     /// The scene went past the node or depth budget.
     static var failureTooLarge: String { t("apps.failure.tooLarge", "This section is too large to show") }

@@ -10071,6 +10071,10 @@ function AcpmuxPane({ initialChat }: { initialChat?: InitialChat }) {
       )}
     </div>
   ) : null;
+  // A fresh chat on another machine has no summary yet: its connection's origin, or a folder list
+  // its host marked as that machine's, says where it runs.
+  const startsElsewhere =
+    remoteChat || snapshot.origin === "remote" || snapshot.origin === "peer" || Boolean(machineFolders);
   // A failed start of a folder harness says what it waits for, in place of the switch's Retry
   // card: Enable (sent from the button's click, then the chat starts again), or the Trust answer.
   const block =
@@ -10180,6 +10184,8 @@ function AcpmuxPane({ initialChat }: { initialChat?: InitialChat }) {
           >
             <SwitchNotice
               switching={snapshot.switching}
+              // Install runs the installer in a terminal tab of this Mac: never for a chat elsewhere.
+              installs={!startsElsewhere}
               onRetry={() => void callNative("chat.harness.retry")}
               // The refused prompt is back in the composer; a chat on another machine starts only
               // with a send, so the share's retry sends it again (as Trust's answer does).
@@ -10197,11 +10203,7 @@ function AcpmuxPane({ initialChat }: { initialChat?: InitialChat }) {
                     }).catch(() => undefined);
                   return;
                 }
-                // A fresh chat on another machine has no summary yet: its connection's origin, or a
-                // folder list its host marked as that machine's, says where it runs.
-                const elsewhere =
-                  remoteChat || snapshot.origin === "remote" || snapshot.origin === "peer" || Boolean(machineFolders);
-                const route = startRefusalRoute(action, elsewhere);
+                const route = startRefusalRoute(action, startsElsewhere);
                 if (route === "newCloudMachine") connectMachine("cloud");
                 // That machine's folder menu; a menu that is not mounted falls back to the panel's answer.
                 else if (route === "machineFolderMenu") {
