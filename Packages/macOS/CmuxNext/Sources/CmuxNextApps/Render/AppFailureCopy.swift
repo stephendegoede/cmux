@@ -20,14 +20,16 @@ struct AppFailureCopy: Equatable, Sendable {
         detail = reason
         let text = Self.strippingPhases(reason)
         let named = text.firstMatch(of: /^(?:[A-Z][A-Za-z]*)?(?:Error|Exception):\s*/)
-        let at = text.firstMatch(of: /\s*\(?\s*at\s+(?:(?:<[^>]*>|[\w$.]+)\s+)?\(?eval_script:(\d+):(\d+)\)?/)
+        let at = text.firstMatch(of: /\s*\(?\s*\bat\s+(?:(?:<[^>]*>|[\w$.]+)\s+)?\(?eval_script:(\d+):(\d+)\)?/)
         if text.hasPrefix("app.limit:") {
             title = AppsStrings.failureTooLarge
             location = nil
         } else if let at {
             title = AppsStrings.failureScript
-            let message = text[(named?.range.upperBound ?? text.startIndex)..<at.range.lowerBound]
-                .trimmingCharacters(in: .whitespaces)
+            // `named` and `at` both take the spaces between them, so an empty message ("Error: at
+            // eval_script:1:1") can put the name's end past the place's start: clamp, never a reversed range.
+            let start = min(named?.range.upperBound ?? text.startIndex, at.range.lowerBound)
+            let message = text[start..<at.range.lowerBound].trimmingCharacters(in: .whitespaces)
             location = AppsStrings.failureScriptAt(line: String(at.output.1), column: String(at.output.2), message: message)
         } else if let named {
             // A JS error with no place (`ReferenceError: x is not defined`): its message is the line.

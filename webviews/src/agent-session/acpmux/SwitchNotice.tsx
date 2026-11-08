@@ -25,6 +25,7 @@ export function SwitchNotice({
   onShared,
   onAction,
   share,
+  installs = true,
 }: {
   switching: AcpmuxSnapshot["switching"];
   onRetry(): void;
@@ -32,6 +33,9 @@ export function SwitchNotice({
   onShared?(): void;
   onAction?(action: SwitchNoticeAction): void;
   share?: MachineShareProps;
+  /// Whether Install may be offered: the installer runs in a terminal tab of this Mac, so a chat on
+  /// another machine never offers it (its sentence still says the agent is not installed there).
+  installs?: boolean;
 }) {
   const t = useT();
   const machineShare = useMachineShare(share, switching?.phase === "failed" ? switching : undefined, onRetry, onShared);
@@ -40,7 +44,7 @@ export function SwitchNotice({
     return <output className="acpmux-switch-notice">{t("switch.deferred", { agent: switching.name })}</output>;
   const view = startFailureView(t, switching);
   const action: SwitchNoticeAction | undefined =
-    startRefusalAction(switching.code) ?? (view.install ? "install" : undefined);
+    startRefusalAction(switching.code) ?? (installs && view.install ? "install" : undefined);
   return (
     <div className="acpmux-host-error acpmux-switch-failed" role="alert">
       <div className="acpmux-host-error-card">
