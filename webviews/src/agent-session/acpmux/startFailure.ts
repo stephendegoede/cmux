@@ -24,6 +24,14 @@ const NOT_INSTALLED =
   /\bspawn\b[^\n]*(?:\bENOENT\b|no such file or directory)|command not found|executable (?:file )?not found|not found in \$?PATH|\bis not installed\b/i;
 const MISSING_FOLDER = /\b(?:cwd|current_dir|working (?:dir|directory|folder)|folder)\b/i;
 
+/// Prose for a person: whole sentences, ending with a period, with none of an error's machinery (a
+/// `word:` prefix, an all-caps errno or code, an os error, a hex value, a call, a path, a URL, a frame).
+const MACHINERY =
+  /:\s|\b[A-Z]{2,}[A-Z_0-9]*\b|\b[Oo]s error\b|\berrno\b|0x[0-9a-fA-F]+|[\w-]+\.[\w-]+\(|\/\w+\/|https?:\/\/|\bat \S+:\d+/;
+function writtenForPeople(text: string): boolean {
+  return /[.!?]$/.test(text) && !text.includes("\n") && text.split(" ").length >= 4 && !MACHINERY.test(text);
+}
+
 export function startFailureView(
   t: Translate,
   switching: { harness: string; name: string; error?: string; code?: string },
@@ -32,6 +40,7 @@ export function startFailureView(
   const words = switching.error?.trim();
   const raw = words && words !== t("switch.unknownError") ? words : undefined;
   if (!raw) return { sentence: t("turn.failure.spawnFailed", { harness: switching.name }) };
+  // A refusal coded with its own way out is written for people: it stays the sentence.
   if (startRefusalAction(switching.code))
     return { sentence: t("switch.failed", { agent: switching.name, reason: raw }) };
   const kind = failureKind(raw, { name: switching.name, harness: switching.harness }, switching.code);
@@ -43,6 +52,9 @@ export function startFailureView(
       ...(install ? { install } : {}),
     };
   }
+  // A sentence written for people (cmux-tui's "build-box did not start the agent in time. Try
+  // again.") is already plain words: it stays the sentence, after the not-installed check above.
+  if (writtenForPeople(raw)) return { sentence: t("switch.failed", { agent: switching.name, reason: raw }) };
   // An unknown failure at start is a start that failed, not "had a problem and stopped".
   const sentence =
     kind === "other"
